@@ -92,8 +92,18 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 安装：把目录拷到 `<profile>/node_modules/@local/agents-md-settings`，在
 `<profile>/cordis.patch.yml` 里加一条 `insert` 行，重启应用。卸载反过来做即可。
 
-注意：`.md` 在 Windows 上没有关联时会先弹一次「如何打开」，选记事本并勾选
-「始终」以后就直达；改完的内容**下一个会话**才生效，当前会话不会重载。
+注意：Windows 上直接拉起记事本（`.md` 往往没有关联，走 `cmd /c start` 会闪一下
+黑框什么也不打开）；macOS/Linux 用系统默认程序。改完的内容**下一个会话**才生效，
+当前会话不会重载。
+
+## Changelog
+
+- **0.3.0** — Windows launches `notepad.exe` directly; the failure reason is shown
+  in the settings row instead of being swallowed.
+- **0.2.0** — the Host resolves `~/.dsh/AGENTS.md` and exposes `POST /agents-md/open`;
+  the Client no longer sends a path.
+- **0.1.0** — first attempt: the Client asked `session/openWorkspacePath` to open
+  `~/.dsh/AGENTS.md`. Hosts that expand `~` under *Documents* opened the wrong folder.
 
 ## License
 
