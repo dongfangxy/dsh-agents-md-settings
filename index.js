@@ -22,7 +22,10 @@ function windowsScript(file) {
   const literal = file.replace(/'/g, "''");
   return [
     "$ErrorActionPreference = 'SilentlyContinue'",
-    `Start-Process notepad.exe -ArgumentList '"${literal}"' | Out-Null`,
+    // -WindowStyle Normal is required: this script itself runs without a console
+    // (the Host spawns PowerShell with windowsHide), and Start-Process would
+    // otherwise hand that hidden show-state down to Notepad.
+    `Start-Process notepad.exe -ArgumentList '"${literal}"' -WindowStyle Normal | Out-Null`,
     '$target = $null',
     'for ($i = 0; $i -lt 60; $i++) {',
     '  Start-Sleep -Milliseconds 100',
@@ -63,7 +66,9 @@ function launch(file) {
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    // No `detached`: on Windows a detached PowerShell silently fails to launch the
+    // editor at all. `windowsHide` only hides the console this script runs in.
+    const child = spawn(command, args, { stdio: 'ignore', windowsHide: true });
     child.once('error', reject);
     child.once('spawn', () => {
       child.unref();

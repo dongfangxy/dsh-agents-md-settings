@@ -98,6 +98,8 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 
 ## Changelog
 
+- **0.7.0** — removed `detached: true` from the spawn. On Windows a detached PowerShell never launched the editor at all (process count stayed 0), so the route answered 200 while nothing appeared. `windowsHide` alone hides the console this script runs in, which is what we wanted.
+
 - **0.6.0** — back to fetch(POST /agents-md/open). The 0.4.0 anchor never navigated because the desktop shell denies target=_blank windows, so the click did nothing at all. This version keeps the 0.5.0 window restore, which is what makes the editor actually visible.
 - **0.5.0** — Windows finds the Notepad window **by title** after launching. On
   Windows 11 
@@ -121,6 +123,7 @@ otepad.exe is a launcher for the packaged app, so the started
 ## License
 
 MIT
+
 
 
 
