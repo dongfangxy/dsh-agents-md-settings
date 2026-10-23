@@ -4,10 +4,6 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const h = React.createElement;
 
-    // A leading "~" is expanded by the Host to its own home directory, so the row
-    // works for any user on any platform where DSH keeps its home at ~/.dsh.
-    const TARGET = '~/.dsh/AGENTS.md';
-
     const styles = {
       row: {
         display: 'flex',
@@ -32,13 +28,16 @@ window.__ModuleLoader__.load({
       },
     };
 
-    const inject = ['slots', 'remote', 'remote.session'];
+    const inject = ['slots'];
 
     function apply(ctx) {
       async function openAgentsMd() {
-        const res = await ctx.remote.session.openWorkspacePath({ path: TARGET });
-        const ok = res !== null && typeof res === 'object' && (res.ok === true || res.opened === true);
-        if (!ok) throw new Error('host did not confirm the open');
+        // The Host resolves HOME and opens the file; the Client only asks.
+        const response = await fetch('/agents-md/open', { method: 'POST' });
+        const body = await response.json().catch(() => null);
+        if (!response.ok || body === null || body.ok !== true) {
+          throw new Error((body && body.error) || `HTTP ${response.status}`);
+        }
       }
 
       function AgentsMdRow() {
@@ -85,3 +84,5 @@ window.__ModuleLoader__.load({
     return { inject, apply };
   },
 });
+
+

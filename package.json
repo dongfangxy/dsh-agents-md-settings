@@ -1,6 +1,6 @@
 {
   "name": "@local/agents-md-settings",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "DeepSeek Harness bundle: open ~/.dsh/AGENTS.md from Settings -> General.",
   "keywords": [
