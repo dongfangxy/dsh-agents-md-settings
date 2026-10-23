@@ -8,15 +8,28 @@ export const inject = ['webServer'];
 /** One fixed target: the user-global instruction file. */
 const AGENTS_MD = join(homedir(), '.dsh', 'AGENTS.md');
 
-function openWithSystem(file) {
+/**
+ * Launch one editor and resolve once the process actually started.
+ *
+ * Windows goes straight to Notepad: the ".md" association is frequently absent,
+ * in which case `cmd /c start` flashes a console and opens nothing at all.
+ */
+function launch(file) {
   const [command, args] =
     process.platform === 'win32'
-      ? ['cmd', ['/c', 'start', '', `"${file}"`]]
+      ? ['notepad.exe', [file]]
       : process.platform === 'darwin'
         ? ['open', [file]]
         : ['xdg-open', [file]];
-  const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
-  child.unref();
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    child.once('error', reject);
+    child.once('spawn', () => {
+      child.unref();
+      resolve(command);
+    });
+  });
 }
 
 /**
@@ -39,12 +52,10 @@ export function apply(ctx) {
         send(405, { ok: false, error: 'use POST' });
         return;
       }
-      try {
-        openWithSystem(AGENTS_MD);
-        send(200, { ok: true, file: AGENTS_MD });
-      } catch (error) {
-        send(500, { ok: false, file: AGENTS_MD, error: String((error && error.message) || error) });
-      }
+      launch(AGENTS_MD).then(
+        (opener) => send(200, { ok: true, file: AGENTS_MD, opener }),
+        (error) => send(500, { ok: false, file: AGENTS_MD, error: String((error && error.message) || error) }),
+      );
     },
   });
 }

@@ -22,10 +22,10 @@ It is a small cordis bundle with a host half and a client half:
 | `package.json` | `dsh.bundle.patch` + `dsh.client` declarations |
 
 The Client half only posts to `/agents-md/open`. The Host half registers that route,
-resolves `os.homedir() + .dsh/AGENTS.md` itself, and hands the file to the operating
-system (`start` on Windows, `open` on macOS, `xdg-open` elsewhere). The route accepts
-no body and no caller-supplied path, so it can only ever open that one file, and the
-bundle carries no personal paths.
+resolves `os.homedir() + .dsh/AGENTS.md` itself, and launches an editor: `notepad.exe`
+on Windows, `open` on macOS, `xdg-open` elsewhere. The route accepts no body and no
+caller-supplied path, so it can only ever open that one file, and the bundle carries
+no personal paths.
 
 > Why not let the Client send a path? It has no portable way to learn the Host's home
 > directory, and `~` is not expanded by every entry point — an early version sent
@@ -64,9 +64,9 @@ and restart.
 
 ## Notes and limitations
 
-- The row opens the file with the **system default** handler. On Windows, a `.md`
-  file with no association shows the "How do you want to open this file?" picker
-  once; choose Notepad (tick *Always*) and later clicks go straight there.
+- On Windows the row launches **Notepad** directly. A `.md` file usually has no shell
+  association, and `cmd /c start` then flashes a console and opens nothing, so the
+  bundle never relies on the association. macOS/Linux use the system default opener.
 - Edits take effect on the **next session**: `AGENTS.md` is read once, at the
   first request of a session, and is not watched for external changes.
 - The route listens on the same local origin as the app. It opens a fixed file and
@@ -98,4 +98,5 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 ## License
 
 MIT
+
 

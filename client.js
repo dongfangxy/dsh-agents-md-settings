@@ -42,17 +42,20 @@ window.__ModuleLoader__.load({
 
       function AgentsMdRow() {
         const [state, setState] = React.useState('idle');
+        const [detail, setDetail] = React.useState('');
 
         const onClick = React.useCallback(async () => {
           setState('opening');
+          setDetail('');
           try {
             await openAgentsMd();
             setState('ok');
           } catch (error) {
             if (typeof console !== 'undefined') console.error('[agents-md] open failed', error);
+            setDetail(String((error && error.message) || error));
             setState('failed');
           }
-          setTimeout(() => setState('idle'), 2500);
+          setTimeout(() => setState('idle'), 4000);
         }, []);
 
         const label = state === 'opening' ? '正在打开…'
@@ -60,10 +63,14 @@ window.__ModuleLoader__.load({
             : state === 'failed' ? '打开失败'
               : '用记事本打开';
 
+        const description = state === 'failed' && detail !== ''
+          ? detail
+          : '在系统中打开 ~/.dsh/AGENTS.md，用记事本修改并保存；新会话生效。';
+
         return h('div', { style: styles.row },
           h('div', { style: styles.text },
             h('div', { style: styles.title }, 'Agent 指令文件（AGENTS.md）'),
-            h('div', { style: styles.desc }, '在系统中打开 ~/.dsh/AGENTS.md，用记事本修改并保存；新会话生效。'),
+            h('div', { style: styles.desc }, description),
           ),
           h('button', {
             type: 'button',
