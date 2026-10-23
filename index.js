@@ -23,7 +23,9 @@ function launch(file) {
         : ['xdg-open', [file]];
 
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    // No windowsHide: for a GUI process it can start the window hidden, which looks
+    // exactly like "the click did nothing" while the route still answers 200.
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
     child.once('error', reject);
     child.once('spawn', () => {
       child.unref();
@@ -44,17 +46,31 @@ export function apply(ctx) {
     kind: 'exact',
     path: '/agents-md/open',
     handler: (request, response) => {
-      const send = (status, payload) => {
+      const wantsJson = request.method === 'POST';
+      const sendHtml = (status, text) => {
+        response.writeHead(status, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        response.end(
+          '<!doctype html><meta charset="utf-8"><title>AGENTS.md</title>' +
+            '<body style="font:14px system-ui;padding:24px">' +
+            `<p>${text}</p>` +
+            '<script>setTimeout(function(){window.close()},300)</script>',
+        );
+      };
+      const sendJson = (status, payload) => {
         response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
         response.end(JSON.stringify(payload));
       };
-      if (request.method !== 'POST') {
-        send(405, { ok: false, error: 'use POST' });
-        return;
-      }
+
       launch(AGENTS_MD).then(
-        (opener) => send(200, { ok: true, file: AGENTS_MD, opener }),
-        (error) => send(500, { ok: false, file: AGENTS_MD, error: String((error && error.message) || error) }),
+        (opener) => {
+          if (wantsJson) sendJson(200, { ok: true, file: AGENTS_MD, opener });
+          else sendHtml(200, `已用 ${opener} 打开：${AGENTS_MD}`);
+        },
+        (error) => {
+          const message = String((error && error.message) || error);
+          if (wantsJson) sendJson(500, { ok: false, file: AGENTS_MD, error: message });
+          else sendHtml(500, `打开失败：${message}`);
+        },
       );
     },
   });

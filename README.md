@@ -98,6 +98,12 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 
 ## Changelog
 
+- **0.4.1** — dropped `windowsHide` from the spawn options. For a GUI process that
+  flag can start the window hidden, which looks exactly like "the click did nothing"
+  even though the route answered `200`.
+- **0.4.0** — the row is a plain `<a href="/agents-md/open">` instead of a JS button,
+  so a page-level click handler cannot swallow it; the Host answers the navigation
+  with a page that closes itself.
 - **0.3.0** — Windows launches `notepad.exe` directly; the failure reason is shown
   in the settings row instead of being swallowed.
 - **0.2.0** — the Host resolves `~/.dsh/AGENTS.md` and exposes `POST /agents-md/open`;
