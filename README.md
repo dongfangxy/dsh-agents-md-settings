@@ -66,8 +66,10 @@ and restart.
   first request of a session, and is not watched for external changes.
 - The `~` expansion relies on the Host path resolver; if a future release stops
   expanding it, pass an absolute path instead.
-- Tested only on Windows 11 with DSH desktop. macOS/Linux should work through the
-  same code path but are untested.
+- **Status: experimental.** The bundle has not been verified end-to-end against a
+  running install yet. If the row does not appear, or the click reports a failure,
+  please open an issue with the Host log line. macOS/Linux share the same code path
+  but are untested.
 
 ## 中文说明
 
