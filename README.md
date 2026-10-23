@@ -98,6 +98,12 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 
 ## Changelog
 
+- **0.5.0** — Windows finds the Notepad window **by title** after launching. On
+  Windows 11 
+otepad.exe is a launcher for the packaged app, so the started
+  process owns no window; the script waits for the tab, restores it, moves it to
+  900x640 and raises it. A saved placement of a few pixels was why the click looked
+  inert.
 - **0.4.1** — dropped `windowsHide` from the spawn options. For a GUI process that
   flag can start the window hidden, which looks exactly like "the click did nothing"
   even though the route answered `200`.
@@ -114,5 +120,6 @@ DSH 每次新会话都会读 `AGENTS.md`，但界面上没有任何入口能打�
 ## License
 
 MIT
+
 
 

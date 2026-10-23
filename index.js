@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { writeFileSync } from 'node:fs';
 
 /** Host half: resolved and opened here, because the Client cannot know HOME. */
 export const inject = ['webServer'];
@@ -9,27 +10,64 @@ export const inject = ['webServer'];
 const AGENTS_MD = join(homedir(), '.dsh', 'AGENTS.md');
 
 /**
+ * Windows: Notepad restores whatever window placement it saved last time. A stale
+ * placement can be a few pixels wide in a corner, which reads to the user as "the
+ * click did nothing" even though the process and window both exist.
+ *
+ * The window is found by title rather than by the started process id: on Windows 11
+ * `notepad.exe` is a launcher for the packaged app, so the process returned by
+ * Start-Process usually owns no window at all.
+ */
+function windowsScript(file) {
+  const literal = file.replace(/'/g, "''");
+  return [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    `Start-Process notepad.exe -ArgumentList '"${literal}"' | Out-Null`,
+    '$target = $null',
+    'for ($i = 0; $i -lt 60; $i++) {',
+    '  Start-Sleep -Milliseconds 100',
+    "  $target = Get-Process notepad -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like '*AGENTS.md*' } | Select-Object -First 1",
+    '  if ($target) { break }',
+    '}',
+    'if ($target) {',
+    "  Add-Type 'using System;using System.Runtime.InteropServices;public class W{[DllImport(\"user32.dll\")]public static extern bool ShowWindow(IntPtr h,int c);[DllImport(\"user32.dll\")]public static extern bool MoveWindow(IntPtr h,int x,int y,int w,int hh,bool r);[DllImport(\"user32.dll\")]public static extern bool SetForegroundWindow(IntPtr h);}'",
+    '  [W]::ShowWindow($target.MainWindowHandle, 9) | Out-Null',
+    '  [W]::MoveWindow($target.MainWindowHandle, 160, 120, 900, 640, $true) | Out-Null',
+    '  [W]::SetForegroundWindow($target.MainWindowHandle) | Out-Null',
+    '}',
+  ].join('\n');
+}
+
+/**
  * Launch one editor and resolve once the process actually started.
  *
- * Windows goes straight to Notepad: the ".md" association is frequently absent,
- * in which case `cmd /c start` flashes a console and opens nothing at all.
+ * Windows goes through a hidden PowerShell script file (written to the temp folder)
+ * so the window can be restored and raised; passing the same program as `-Command`
+ * breaks on the embedded quotes. The ".md" association is unreliable and
+ * `cmd /c start` only flashes a console.
  */
 function launch(file) {
-  const [command, args] =
-    process.platform === 'win32'
-      ? ['notepad.exe', [file]]
-      : process.platform === 'darwin'
-        ? ['open', [file]]
-        : ['xdg-open', [file]];
+  let command;
+  let args;
+  if (process.platform === 'win32') {
+    const scriptPath = join(tmpdir(), 'dsh-open-agents-md.ps1');
+    writeFileSync(scriptPath, windowsScript(file), 'utf8');
+    command = 'powershell.exe';
+    args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', scriptPath];
+  } else if (process.platform === 'darwin') {
+    command = 'open';
+    args = [file];
+  } else {
+    command = 'xdg-open';
+    args = [file];
+  }
 
   return new Promise((resolve, reject) => {
-    // No windowsHide: for a GUI process it can start the window hidden, which looks
-    // exactly like "the click did nothing" while the route still answers 200.
-    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+    const child = spawn(command, args, { detached: true, stdio: 'ignore', windowsHide: true });
     child.once('error', reject);
     child.once('spawn', () => {
       child.unref();
-      resolve(command);
+      resolve(process.platform === 'win32' ? 'notepad.exe' : command);
     });
   });
 }
@@ -75,3 +113,4 @@ export function apply(ctx) {
     },
   });
 }
+
