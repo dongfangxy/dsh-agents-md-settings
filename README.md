@@ -39,21 +39,40 @@ is the current user's own `AGENTS.md`.
 
 ## Install
 
-This is a local bundle, not an npm package. Use the profile the app actually runs —
-on Windows desktop it defaults to `%ProgramData%\dsh-data\profiles\desktop`; the
-exact path is in the app's `DSH_PROFILE_DIR`.
+This is a bundle, not an npm-published plugin. Use the profile the app actually runs —
+on Windows desktop it defaults to `%ProgramData%\dsh-data\profiles\desktop`; the exact
+path is in the app's `DSH_PROFILE_DIR`.
 
-**Declare it as a profile dependency instead of copying the folder in.** A folder
-copied into `node_modules` is pruned by the next `pnpm install`, and every plugin
-install or upgrade runs one — that is how this bundle disappears while the patch row
-that points at it stays behind. A declared dependency is recorded in the lockfile, so
-later installs leave it alone.
+**Install it as a plugin. Never copy the folder into `node_modules`.** A copied folder
+is pruned by the next `pnpm install`, and every plugin install or upgrade runs one —
+that is how this bundle can disappear on its own while the patch row that points at it
+stays behind. An installed package is a recorded dependency, so later installs keep it.
 
-1. In `<profile>/package.json`, add one dependency pointing at this folder:
+### As a package (recommended)
+
+```
+dsh plugin add github:dongfangxy/dsh-agents-md-settings
+```
+
+The same string works in the app: **Settings → Plugins → Add plugin**, which accepts a
+package name, a Git address, a tarball or an absolute local path. The installer writes
+the dependency into `<profile>/package.json` and applies the bundle's own patch row, so
+later installs leave it alone. Restart DeepSeek Harness; the row appears at the bottom
+of **Settings → General**.
+
+If the row is missing after a restart, the patch row did not get applied — add it by
+hand as shown under *From a local checkout* below.
+
+### From a local checkout (development)
+
+Use this while you are editing the source: declare a `link:` dependency on the folder
+you are working in.
+
+1. In `<profile>/package.json`, add one dependency:
 
    ```json
    "dependencies": {
-     "@local/agents-md-settings": "link:<absolute path to this folder>"
+     "@local/agents-md-settings": "link:<absolute path to the checkout>"
    }
    ```
 
@@ -63,7 +82,7 @@ later installs leave it alone.
    pnpm install --dir <profile>
    ```
 
-   `node_modules/@local/agents-md-settings` becomes a link to this folder, and
+   `node_modules/@local/agents-md-settings` becomes a link to the checkout, and
    `pnpm-lock.yaml` records it.
 
 3. Add one row to `<profile>/cordis.patch.yml`, matching the existing indentation:
@@ -76,15 +95,16 @@ later installs leave it alone.
 
 4. Restart DeepSeek Harness. The row appears at the bottom of **Settings → General**.
 
-If your build exposes the `plugin_manager` tool,
-`install_bundle` with `target: "<absolute path to this folder>"` links the folder and
-writes the patch row for you.
+If your build exposes the `plugin_manager` tool, `install_bundle` with
+`target: "<absolute path to this checkout>"` does steps 1–3 for you.
 
 ## Uninstall
 
-Remove the row from `cordis.patch.yml`, drop the `@local/agents-md-settings`
-dependency from `<profile>/package.json`, run `pnpm install --dir <profile>` again so
-the link is cleaned up, and restart.
+Uninstall through the same surface: **Settings → Plugins** removes the package and its
+patch row. By hand, drop the `@local/agents-md-settings` dependency from
+`<profile>/package.json` and the `agents-md-settings` insert row from
+`<profile>/cordis.patch.yml`, run `pnpm install --dir <profile>` so the folder is
+cleaned up, and restart.
 
 ## Notes and limitations
 
@@ -102,6 +122,7 @@ the link is cleaned up, and restart.
 
 | Version | Change |
 |---|---|
+| 1.0.2 | README: lead with `dsh plugin add github:…` so a new user installs a real package instead of copying the folder into `node_modules` and losing it on the next install. |
 | 1.0.1 | README: install as a profile dependency. A folder copied into `node_modules` is deleted by the next `pnpm install`, which is why the row could vanish on its own. |
 | 1.0.0 | Works end to end on Windows. Client posts to the route; host launches Notepad and raises its window. |
 | 0.7.0 | Removed `detached: true` — on Windows a detached PowerShell never launched the editor, so the route answered `200` while nothing appeared. |
@@ -129,11 +150,13 @@ DSH 每个新会话都会读 `AGENTS.md`，但界面上没有入口能打开它�
   任何人的路径。
 - Windows 上直接拉起记事本，并且会把窗口还原成 900×640 提到前台（记事本可能记住
   了一个极小的窗口尺寸，看起来就像"没反应"）。
-- 安装：把本目录声明成 profile 依赖（在 `<profile>/package.json` 里加
-  `"@local/agents-md-settings": "link:<本目录绝对路径>"`，再 `pnpm install --dir <profile>`），
-  然后在 `<profile>/cordis.patch.yml` 里加一条 `insert` 行，重启应用。
-  **不要直接把目录拷进 `node_modules`**——下一次 `pnpm install` 会把它当多余包装清掉，
-  而 `cordis.patch.yml` 里那行还留着，表现就是"插件莫名其妙不见了"。卸载反过来做。
+- 安装（推荐）：`dsh plugin add github:dongfangxy/dsh-agents-md-settings`，或在应用里
+  走 **设置 → 插件 → Add plugin** 填同一串。安装器会把它写进 profile 的依赖、并应用
+  bundle 自带的 patch 行，重启后生效。
+- **不要直接把目录拷进 `node_modules`**——下一次 `pnpm install` 会把它当多余包装清掉，
+  而 `cordis.patch.yml` 里那行还留着，表现就是"插件莫名其妙不见了"。要改源码时，把依赖
+  改成 `link:<本目录绝对路径>` 再 `pnpm install --dir <profile>`，并手动补 `insert` 行。
+- 卸载：在 设置 → 插件 里移除；或删掉依赖与 `insert` 行，重新 `pnpm install`，重启。
 - 改完保存后，**下一个会话**才生效；当前会话不会重载。
 
 ## License
